@@ -1,3 +1,4 @@
+package demo;
 /* This file is part of JnaFileChooser.
  *
  * JnaFileChooser is free software: you can redistribute it and/or modify it
@@ -7,8 +8,9 @@
  * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  * or FITNESS FOR A PARTICULAR PURPOSE.
  */
-package jnafilechooser.demo;
 
+
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
@@ -21,10 +23,9 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
 
-import jnafilechooser.api.JnaFileChooser;
-import net.miginfocom.swing.MigLayout;
-
 import com.sun.jna.Platform;
+
+import fileBrowser.JnaFileChooser;
 
 public class PortablePorcelainDemo {
 	public static void main(String[] args) throws Exception {
@@ -63,7 +64,7 @@ public class PortablePorcelainDemo {
 			}
 		});
 
-		final JPanel content = new JPanel(new MigLayout("", "[right][left]"));
+		final JPanel content = new JPanel(new GridLayout());
 
 		content.add(new JLabel("Enable multiselect:"));
 		content.add(enableMultiSelect, "wrap");

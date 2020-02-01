@@ -1,85 +1,86 @@
+package fileBrowser;
+
 /* This file is part of JnaFileChooser.
- *
- * JnaFileChooser is free software: you can redistribute it and/or modify it
- * under the terms of the new BSD license.
- *
- * JnaFileChooser is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- * or FITNESS FOR A PARTICULAR PURPOSE.
- */
-package jnafilechooser.api;
+*
+* JnaFileChooser is free software: you can redistribute it and/or modify it
+* under the terms of the new BSD license.
+*
+* JnaFileChooser is distributed in the hope that it will be useful, but
+* WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+* or FITNESS FOR A PARTICULAR PURPOSE.
+*/
 
 import java.awt.Window;
 import java.io.File;
 import java.util.ArrayList;
-
-import jnafilechooser.win32.Comdlg32;
+import java.util.Collections;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.WString;
 
 /**
- * The native Windows file chooser dialog.
- *
- * Example:
- * WindowsFileChooser fc = new WindowsFileChooser("C:\\");
- * fc.addFilter("All Files", "*");
- * fc.addFilter("Text files", "txt", "log", "xml", "css", "html");
- * fc.addFilter("Source code", "java", "c", "cpp", "cc", "h", "hpp");
- * fc.addFilter("Binary files", "exe", "class", "jar", "dll", "so");
- * if (fc.showOpenDialog(parent)) {
- *     File f = fc.getSelectedFile();
- *     // do something with f
- * }
- *
- * Note that although you can set the initial directory Windows will
- * determine the initial directory according to the following rules
- * (the initial directory is referred to as "lpstrInitialDir"):
- *
- * Windows 7:
- * 1. If lpstrInitialDir has the same value as was passed the first time the
- *    application used an Open or Save As dialog box, the path most recently
- *    selected by the user is used as the initial directory.
- * 2. Otherwise, if lpstrFile contains a path, that path is the initial
- *    directory.
- * 3. Otherwise, if lpstrInitialDir is not NULL, it specifies the initial
- *    directory.
- * 4. If lpstrInitialDir is NULL and the current directory contains any files of
- *    the specified filter types, the initial directory is the current
- *    directory.
- * 5. Otherwise, the initial directory is the personal files directory of the
- *    current user.
- * 6. Otherwise, the initial directory is the Desktop folder.
- *
- * Windows 2000/XP/Vista:
- * 1. If lpstrFile contains a path, that path is the initial directory.
- * 2. Otherwise, lpstrInitialDir specifies the initial directory.
- * 3. Otherwise, if the application has used an Open or Save As dialog box in
- *    the past, the path most recently used is selected as the initial
- *    directory. However, if an application is not run for a long time, its
- *    saved selected path is discarded.
- * 4. If lpstrInitialDir is NULL and the current directory contains any files
- *    of the specified filter types, the initial directory is the current
- *    directory.
- * 5. Otherwise, the initial directory is the personal files directory of the
- *    current user.
- * 6. Otherwise, the initial directory is the Desktop folder.
- *
- * Therefore you probably want to use an exe wrapper like WinRun4J in order
- * for this to work properly on Windows 7. Otherwise multiple programs may
- * interfere with each other. Unfortunately there doesn't seem to be a way
- * to override this behaviour.
- *
- * {@link http://msdn.microsoft.com/en-us/library/ms646839.aspx}
- * {@link http://winrun4j.sourceforge.net/}
- */
+* The native Windows file chooser dialog.
+*
+* Example:
+* WindowsFileChooser fc = new WindowsFileChooser("C:\\");
+* fc.addFilter("All Files", "*");
+* fc.addFilter("Text files", "txt", "log", "xml", "css", "html");
+* fc.addFilter("Source code", "java", "c", "cpp", "cc", "h", "hpp");
+* fc.addFilter("Binary files", "exe", "class", "jar", "dll", "so");
+* if (fc.showOpenDialog(parent)) {
+*     File f = fc.getSelectedFile();
+*     // do something with f
+* }
+*
+* Note that although you can set the initial directory Windows will
+* determine the initial directory according to the following rules
+* (the initial directory is referred to as "lpstrInitialDir"):
+*
+* Windows 7:
+* 1. If lpstrInitialDir has the same value as was passed the first time the
+*    application used an Open or Save As dialog box, the path most recently
+*    selected by the user is used as the initial directory.
+* 2. Otherwise, if lpstrFile contains a path, that path is the initial
+*    directory.
+* 3. Otherwise, if lpstrInitialDir is not NULL, it specifies the initial
+*    directory.
+* 4. If lpstrInitialDir is NULL and the current directory contains any files of
+*    the specified filter types, the initial directory is the current
+*    directory.
+* 5. Otherwise, the initial directory is the personal files directory of the
+*    current user.
+* 6. Otherwise, the initial directory is the Desktop folder.
+*
+* Windows 2000/XP/Vista:
+* 1. If lpstrFile contains a path, that path is the initial directory.
+* 2. Otherwise, lpstrInitialDir specifies the initial directory.
+* 3. Otherwise, if the application has used an Open or Save As dialog box in
+*    the past, the path most recently used is selected as the initial
+*    directory. However, if an application is not run for a long time, its
+*    saved selected path is discarded.
+* 4. If lpstrInitialDir is NULL and the current directory contains any files
+*    of the specified filter types, the initial directory is the current
+*    directory.
+* 5. Otherwise, the initial directory is the personal files directory of the
+*    current user.
+* 6. Otherwise, the initial directory is the Desktop folder.
+*
+* Therefore you probably want to use an exe wrapper like WinRun4J in order
+* for this to work properly on Windows 7. Otherwise multiple programs may
+* interfere with each other. Unfortunately there doesn't seem to be a way
+* to override this behaviour.
+*
+* {@link http://msdn.microsoft.com/en-us/library/ms646839.aspx}
+* {@link http://winrun4j.sourceforge.net/}
+*/
 public class WindowsFileChooser
 {
 	protected File selectedFile;
 	protected File currentDirectory;
 	protected ArrayList<String[]> filters;
-
+	protected String defaultFile = "";
+	protected String dialogTitle = "";
 	/**
 	 * creates a new file chooser
 	 */
@@ -121,15 +122,39 @@ public class WindowsFileChooser
 	/**
 	 * add a filter to the user-selectable list of file filters
 	 *
-	 * @param filter you must pass at least 2 arguments, the first argument
-	 *               is the name of this filter and the remaining arguments
+	 * @param name name of the filter
+	 * @param filter you must pass at least 1 argument, the arguments
 	 *               are the file extensions.
 	 */
-	public void addFilter(String ... filter) {
-		if (filter.length < 2) {
-			throw new IllegalArgumentException();
-		}
-		filters.add(filter);
+	public void addFilter(String name, String... filter) {
+        if (filter.length < 1) {
+            throw new IllegalArgumentException();
+        }
+        ArrayList<String> parts = new ArrayList<String>();
+        parts.add(name);
+        Collections.addAll(parts, filter);
+        filters.add(parts.toArray(new String[parts.size()]));
+	}
+	
+	/**
+	 * set a default name
+	 *
+	 * @param default name of file
+	 * 
+	 */
+	void setWinDefaultFileName(String fname) {
+		this.defaultFile = fname;
+	}
+	
+	
+	/**
+	 * set a title name
+	 *
+	 * @param Title of dialog
+	 * 
+	 */
+	void setWinDialogTitle(String tname) {
+		this.dialogTitle = tname;
 	}
 
 	/**
@@ -176,7 +201,7 @@ public class WindowsFileChooser
 			// enable resizing of the dialog
 			| Comdlg32.OFN_ENABLESIZING;
 
-		params.hwndOwner = Native.getWindowPointer(parent);
+		params.hwndOwner = parent == null ? null : Native.getWindowPointer(parent);
 
 		// lpstrFile contains the selection path after the dialog
 		// returns. It must be big enough for the path to fit or
@@ -187,7 +212,14 @@ public class WindowsFileChooser
 		// 4 bytes per char + 1 null byte
 		final int bufferSize = 4 * bufferLength + 1;
 		params.lpstrFile = new Memory(bufferSize);
-		params.lpstrFile.clear(bufferSize);
+		if (!open & !defaultFile.isEmpty()) {
+			params.lpstrFile.setWideString(0, defaultFile);
+		} else {
+			params.lpstrFile.clear(bufferSize);
+		}
+		if (!dialogTitle.isEmpty()) {
+			params.lpstrTitle = new WString(dialogTitle);
+		}
 
 		// nMaxFile
 		// http://msdn.microsoft.com/en-us/library/ms646839.aspx:
@@ -216,7 +248,7 @@ public class WindowsFileChooser
 			Comdlg32.GetSaveFileNameW(params);
 
 		if (approved) {
-			final String filePath = params.lpstrFile.getString(0, true);
+			final String filePath = params.lpstrFile.getWideString(0);
 			selectedFile = new File(filePath);
 			final File dir = selectedFile.getParentFile();
 			currentDirectory = dir;

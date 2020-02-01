@@ -1,44 +1,45 @@
+package fileBrowser;
+
 /* This file is part of JnaFileChooser.
- *
- * JnaFileChooser is free software: you can redistribute it and/or modify it
- * under the terms of the new BSD license.
- *
- * JnaFileChooser is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- * or FITNESS FOR A PARTICULAR PURPOSE.
- */
-package jnafilechooser.api;
+*
+* JnaFileChooser is free software: you can redistribute it and/or modify it
+* under the terms of the new BSD license.
+*
+* JnaFileChooser is distributed in the hope that it will be useful, but
+* WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+* or FITNESS FOR A PARTICULAR PURPOSE.
+*/
 
 import java.awt.Window;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
-
 import com.sun.jna.Platform;
 
 /**
- * JnaFileChooser is a wrapper around the native Windows file chooser
- * and folder browser that falls back to the Swing JFileChooser on platforms
- * other than Windows or if the user chooses a combination of features
- * that are not supported by the native dialogs (for example multiple
- * selection of directories).
- *
- * Example:
- * JnaFileChooser fc = new JnaFileChooser();
- * fc.setFilter("All Files", "*");
- * fc.setFilter("Pictures", "jpg", "jpeg", "gif", "png", "bmp");
- * fc.setMultiSelectionEnabled(true);
- * fc.setMode(JnaFileChooser.Mode.FilesAndDirectories);
- * if (fc.showOpenDialog(parent)) {
- *     Files[] selected = fc.getSelectedFiles();
- *     // do something with selected
- * }
- *
- * @see JFileChooser, WindowsFileChooser, WindowsFileBrowser
- */
+* JnaFileChooser is a wrapper around the native Windows file chooser
+* and folder browser that falls back to the Swing JFileChooser on platforms
+* other than Windows or if the user chooses a combination of features
+* that are not supported by the native dialogs (for example multiple
+* selection of directories).
+*
+* Example:
+* JnaFileChooser fc = new JnaFileChooser();
+* fc.setFilter("All Files", "*");
+* fc.setFilter("Pictures", "jpg", "jpeg", "gif", "png", "bmp");
+* fc.setMultiSelectionEnabled(true);
+* fc.setMode(JnaFileChooser.Mode.FilesAndDirectories);
+* if (fc.showOpenDialog(parent)) {
+*     Files[] selected = fc.getSelectedFiles();
+*     // do something with selected
+* }
+*
+* @see JFileChooser, WindowsFileChooser, WindowsFileBrowser
+*/
 public class JnaFileChooser
 {
 	private static enum Action { Open, Save }
@@ -64,6 +65,10 @@ public class JnaFileChooser
 	protected ArrayList<String[]> filters;
 	protected boolean multiSelectionEnabled;
 	protected Mode mode;
+	protected String defaultFile;
+    protected String dialogTitle;
+    protected String openBtnText;
+    protected String saveBtnText;
 
 	/**
 	 * creates a new file chooser with multiselection disabled and mode set
@@ -74,6 +79,10 @@ public class JnaFileChooser
 		multiSelectionEnabled = false;
 		mode = Mode.Files;
 		selectedFiles = new File[] { null };
+		defaultFile = "";
+        dialogTitle = "";
+        openBtnText = "";
+        saveBtnText = "";
 	}
 
 	/**
@@ -83,8 +92,10 @@ public class JnaFileChooser
 	 */
 	public JnaFileChooser(File currentDirectory) {
 		this();
-		this.currentDirectory = currentDirectory.isDirectory() ?
-			currentDirectory : currentDirectory.getParentFile();
+		if (currentDirectory != null) {
+            this.currentDirectory = currentDirectory.isDirectory() ? currentDirectory
+                    : currentDirectory.getParentFile();
+        }
 	}
 
 	/**
@@ -93,9 +104,14 @@ public class JnaFileChooser
 	 * @param currentDirectory the initial directory
 	 */
 	public JnaFileChooser(String currentDirectoryPath) {
-		this(currentDirectoryPath != null ?
-			new File(currentDirectoryPath) : null);
+		this(currentDirectoryPath != null ? new File(currentDirectoryPath) : null);
+
 	}
+	
+	public void setCurrentDirectory(String currentDirectoryPath) {
+		this.currentDirectory = (currentDirectoryPath != null ? new File(currentDirectoryPath) : null);
+	}
+
 
 	/**
 	 * shows a dialog for opening files
@@ -155,7 +171,21 @@ public class JnaFileChooser
 		final JFileChooser fc = new JFileChooser(currentDirectory);
 		fc.setMultiSelectionEnabled(multiSelectionEnabled);
 		fc.setFileSelectionMode(mode.getJFileChooserValue());
-
+		
+		// set select file
+		if (!defaultFile.isEmpty() & action == Action.Save) {
+			File fsel = new File(defaultFile);
+			fc.setSelectedFile(fsel);
+		}
+		if (!dialogTitle.isEmpty()) {
+			fc.setDialogTitle(dialogTitle);
+		}
+		if (action == Action.Open & !openBtnText.isEmpty()) {
+			fc.setApproveButtonText(openBtnText);
+		} else if (action == Action.Save & !saveBtnText.isEmpty()) {
+			fc.setApproveButtonText(saveBtnText);
+		}
+        
 		// build filters
 		if (filters.size() > 0) {
 			boolean useAcceptAllFilter = false;
@@ -165,8 +195,8 @@ public class JnaFileChooser
 					useAcceptAllFilter = true;
 					continue;
 				}
-				fc.addChoosableFileFilter(new FileNameExtensionFilter(
-					spec[0], Arrays.copyOfRange(spec, 1, spec.length)));
+				fc.addChoosableFileFilter(
+						new FileNameExtensionFilter(spec[0], Arrays.copyOfRange(spec, 1, spec.length)));
 			}
 			fc.setAcceptAllFileFilterUsed(useAcceptAllFilter);
 		}
@@ -174,13 +204,14 @@ public class JnaFileChooser
 		int result = -1;
 		if (action == Action.Open) {
 			result = fc.showOpenDialog(parent);
-		}
-		else {
-			result = fc.showSaveDialog(parent);
+		} else {
+			if (saveBtnText.isEmpty())
+				result = fc.showSaveDialog(parent);
+			else
+				result = fc.showDialog(parent, null);
 		}
 		if (result == JFileChooser.APPROVE_OPTION) {
-			selectedFiles = multiSelectionEnabled ?
-				fc.getSelectedFiles() : new File[] { fc.getSelectedFile() };
+			selectedFiles = multiSelectionEnabled ? fc.getSelectedFiles() : new File[] { fc.getSelectedFile() };
 			currentDirectory = fc.getCurrentDirectory();
 			return true;
 		}
@@ -191,6 +222,14 @@ public class JnaFileChooser
 	private boolean showWindowsFileChooser(Window parent, Action action) {
 		final WindowsFileChooser fc = new WindowsFileChooser(currentDirectory);
 		fc.setFilters(filters);
+
+		if (!defaultFile.isEmpty())
+			fc.setWinDefaultFileName(defaultFile);
+
+		if (!dialogTitle.isEmpty()) {
+			fc.setWinDialogTitle(dialogTitle);
+		}
+		
 		final boolean result = fc.showDialog(parent, action == Action.Open);
 		if (result) {
 			selectedFiles = new File[] { fc.getSelectedFile() };
@@ -201,11 +240,13 @@ public class JnaFileChooser
 
 	private boolean showWindowsFolderBrowser(Window parent) {
 		final WindowsFolderBrowser fb = new WindowsFolderBrowser();
+		if (!dialogTitle.isEmpty()) {
+			fb.setTitle(dialogTitle);
+		}
 		final File file = fb.showDialog(parent);
 		if (file != null) {
 			selectedFiles = new File[] { file };
-			currentDirectory = file.getParentFile() != null ?
-				file.getParentFile() : file;
+			currentDirectory = file.getParentFile() != null ? file.getParentFile() : file;
 			return true;
 		}
 
@@ -213,20 +254,21 @@ public class JnaFileChooser
 	}
 
 	/**
-	 * add a filter to the user-selectable list of file filters
-	 *
-	 * @param filter you must pass at least 2 arguments, the first argument
-	 *               is the name of this filter and the remaining arguments
-	 *               are the file extensions.
-	 *
-	 * @throws IllegalArgumentException if less than 2 arguments are passed
-	 */
-	public void addFilter(String ... values) {
-		if (values.length < 2) {
-			throw new IllegalArgumentException();
-		}
-		filters.add(values);
-	}
+     * add a filter to the user-selectable list of file filters
+     *
+     * @param name   name of the filter
+     * @param filter you must pass at least 1 argument, the arguments are the file
+     *               extensions.
+     */
+    public void addFilter(String name, String... filter) {
+        if (filter.length < 1) {
+            throw new IllegalArgumentException();
+        }
+        ArrayList<String> parts = new ArrayList<String>();
+        parts.add(name);
+        Collections.addAll(parts, filter);
+        filters.add(parts.toArray(new String[parts.size()]));
+    }
 
 	/**
 	 * sets the selection mode
@@ -252,6 +294,46 @@ public class JnaFileChooser
 
 	public boolean isMultiSelectionEnabled() {
 		return multiSelectionEnabled;
+	}
+
+	/**
+	 * set a default name
+	 *
+	 * @param dafault name of file
+	 * 
+	 */
+	public void setDefaultFileName(String dfile) {
+		this.defaultFile = dfile;
+	}
+
+	/**
+	 * set a title name
+	 *
+	 * @param Title of dialog
+	 * 
+	 */
+	public void setDialogTitle(String title) {
+		this.dialogTitle = title;
+	}
+
+	/**
+	 * set a open button name
+	 *
+	 * @param open button text
+	 * 
+	 */
+	public void setOpenBtnText(String btnText) {
+		this.openBtnText = btnText;
+	}
+
+	/**
+	 * set a save button name
+	 *
+	 * @param save button text
+	 * 
+	 */
+	public void setSaveBtnText(String btnText) {
+		this.saveBtnText = btnText;
 	}
 
 	public File[] getSelectedFiles() {

@@ -1,43 +1,41 @@
+package fileBrowser;
+
 /* This file is part of JnaFileChooser.
- *
- * JnaFileChooser is free software: you can redistribute it and/or modify it
- * under the terms of the new BSD license.
- *
- * JnaFileChooser is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
- * or FITNESS FOR A PARTICULAR PURPOSE.
- */
-package jnafilechooser.api;
+*
+* JnaFileChooser is free software: you can redistribute it and/or modify it
+* under the terms of the new BSD license.
+*
+* JnaFileChooser is distributed in the hope that it will be useful, but
+* WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+* or FITNESS FOR A PARTICULAR PURPOSE.
+*/
 
 import java.awt.Window;
 import java.io.File;
-
-import jnafilechooser.win32.Ole32;
-import jnafilechooser.win32.Shell32;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
 /**
- * The native Windows folder browser.
- *
- * Example:
- * WindowsFolderBrowser fb = new WindowsFolderBrowser();
- * File dir = fb.showDialog(parentWindow);
- * if (dir != null) {
- *     // do something with dir
- * }
- */
+* The native Windows folder browser.
+*
+* Example:
+* WindowsFolderBrowser fb = new WindowsFolderBrowser();
+* File dir = fb.showDialog(parentWindow);
+* if (dir != null) {
+*     // do something with dir
+* }
+*/
 public class WindowsFolderBrowser
 {
-	private String title;
+	private String dialogTitle;
 
 	/**
 	 * creates a new folder browser
 	 */
 	public WindowsFolderBrowser() {
-		title = null;
+		dialogTitle = null;
 	}
 
 	/**
@@ -47,9 +45,13 @@ public class WindowsFolderBrowser
 	 * @param title text that will be displayed at the top of the dialog
 	 */
 	public WindowsFolderBrowser(String title) {
-		this.title = title;
+		this.dialogTitle = title;
 	}
-
+	
+	public void setTitle(String tname) {
+		this.dialogTitle = tname;
+	}
+	
 	/**
 	 * displays the dialog to the user
 	 *
@@ -69,8 +71,8 @@ public class WindowsFolderBrowser
 			// I don't know what happens if this is executed where it's
 			// not supported.
 			Shell32.BIF_USENEWUI;
-		if (title != null) {
-			params.lpszTitle = title;
+		if (dialogTitle != null) {
+			params.lpszTitle = dialogTitle;
 		}
 		final Pointer pidl = Shell32.SHBrowseForFolder(params);
 		if (pidl != null) {
@@ -78,7 +80,7 @@ public class WindowsFolderBrowser
 			// be more than big enough
 			final Pointer path = new Memory(1024 * 4);
 			Shell32.SHGetPathFromIDListW(pidl, path);
-			final String filePath = path.getString(0, true);
+			final String filePath = path.getWideString(0);
 			final File file = new File(filePath);
 			Ole32.CoTaskMemFree(pidl);
 			return file;
